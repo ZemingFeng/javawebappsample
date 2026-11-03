@@ -21,19 +21,19 @@ node {
     stage('deploy') {
       def resourceGroup = 'jenkins-get-started-rg'
       def webAppName = 'zemingazureapp'
-      // login Azure
+      
+      // 使用 Service Principal 凭据登录 Azure
       withCredentials([usernamePassword(credentialsId: 'AzureServicePrincipal', passwordVariable: 'AZURE_CLIENT_SECRET', usernameVariable: 'AZURE_CLIENT_ID')]) {
-       sh '''
+        sh '''
           az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
           az account set -s $AZURE_SUBSCRIPTION_ID
         '''
       }
-      // get publish settings
-      def pubProfilesJson = sh script: "az webapp deployment list-publishing-profiles -g $resourceGroup -n $webAppName", returnStdout: true
-      def ftpProfile = getFtpPublishProfile pubProfilesJson
-      // upload package
-      sh "curl -T target/calculator-1.0.war $ftpProfile.url/webapps/ROOT.war -u '$ftpProfile.username:$ftpProfile.password'"
-      // log out
+      
+      // 使用 Azure CLI 直接将 WAR 包部署到 Web App（自动处理解压和发布）
+      sh "az webapp deploy --resource-group ${resourceGroup} --name ${webAppName} --src-path target/calculator-1.0.war --type war"
+      
+      // 登出 Azure（安全收尾）
       sh 'az logout'
     }
   }
